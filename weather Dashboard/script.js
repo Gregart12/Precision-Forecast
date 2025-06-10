@@ -15,6 +15,7 @@ const errorDiv = document.getElementById('error');
 const themeToggle = document.getElementById('theme-toggle');
 const celsiusBtn = document.getElementById('celsius');
 const fahrenheitBtn = document.getElementById('fahrenheit');
+const suggestionsList = document.getElementById('suggestions');
 
 let currentUnit = 'metric';
 loading.style.display = 'none';
@@ -28,6 +29,7 @@ function displayError(msg) {
 function fetchWeather(city, unit = 'metric') {
   loading.style.display = 'block';
   errorDiv.textContent = '';
+  suggestionsList.classList.add('hidden');
 
   const weatherURL = `https://api.openweathermap.org/data/2.5/weather?q=${city}&units=${unit}&appid=${apiKey}`;
   const forecastURL = `https://api.openweathermap.org/data/2.5/forecast?q=${city}&units=${unit}&appid=${apiKey}`;
@@ -77,13 +79,48 @@ function displayForecast(data) {
   });
 }
 
+// Suggestion logic
+cityInput.addEventListener('input', () => {
+  const query = cityInput.value.trim();
+  if (query.length < 2) {
+    suggestionsList.classList.add('hidden');
+    return;
+  }
+
+  const geoURL = `https://api.openweathermap.org/geo/1.0/direct?q=${query}&limit=5&appid=${apiKey}`;
+  fetch(geoURL)
+    .then(res => res.json())
+    .then(data => {
+      suggestionsList.innerHTML = '';
+      if (data.length === 0) {
+        suggestionsList.classList.add('hidden');
+        return;
+      }
+
+      data.forEach(place => {
+        const li = document.createElement('li');
+        li.textContent = `${place.name}, ${place.state || ''} ${place.country}`;
+        li.addEventListener('click', () => {
+          cityInput.value = place.name;
+          suggestionsList.classList.add('hidden');
+          fetchWeather(place.name, currentUnit);
+        });
+        suggestionsList.appendChild(li);
+      });
+
+      suggestionsList.classList.remove('hidden');
+    })
+    .catch(() => {
+      suggestionsList.classList.add('hidden');
+    });
+});
+
 // Button Listeners
 getWeatherBtn.addEventListener('click', () => {
   const city = cityInput.value.trim();
   if (city) fetchWeather(city, currentUnit);
 });
 
-// **Added Enter key listener for city input**
 cityInput.addEventListener('keypress', (event) => {
   if (event.key === 'Enter') {
     event.preventDefault();
